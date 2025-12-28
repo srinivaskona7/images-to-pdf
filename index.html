@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Premium Images to PDF Converter - Convert, edit, and merge images into PDF">
+    <title>Images to PDF Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Animated Background -->
+        <div class="bg-gradient"></div>
+
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-images"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>Images to PDF</h1>
+                    <span>Pro Converter</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" id="themeToggle" title="Toggle Theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section class="upload-section glass-card" id="uploadSection">
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h2>Drop Images Here</h2>
+                    <p>or click to browse files</p>
+                    <div class="upload-formats">
+                        <span>Supports: JPG, PNG, GIF, WebP, BMP</span>
+                    </div>
+                    <input type="file" id="fileInput" multiple accept="image/*" hidden>
+                </div>
+                <div class="upload-actions">
+                    <button class="btn btn-primary" id="browseBtn">
+                        <i class="fas fa-folder-open"></i>
+                        Browse Files
+                    </button>
+                    <button class="btn btn-secondary" id="pasteBtn">
+                        <i class="fas fa-paste"></i>
+                        Paste from Clipboard
+                    </button>
+                </div>
+            </section>
+
+            <!-- Editor Section -->
+            <section class="editor-section" id="editorSection" style="display: none;">
+                <!-- Toolbar -->
+                <div class="toolbar glass-card">
+                    <div class="toolbar-left">
+                        <button class="btn btn-sm" id="addMoreBtn">
+                            <i class="fas fa-plus"></i>
+                            Add More
+                        </button>
+                        <button class="btn btn-sm" id="selectAllBtn">
+                            <i class="fas fa-check-double"></i>
+                            Select All
+                        </button>
+                        <button class="btn btn-sm btn-danger" id="deleteSelectedBtn" disabled>
+                            <i class="fas fa-trash"></i>
+                            Delete
+                        </button>
+                    </div>
+                    <div class="toolbar-center">
+                        <span class="image-count"><span id="imageCount">0</span> images</span>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="btn btn-sm" id="rotateLeftBtn" title="Rotate Left">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        <button class="btn btn-sm" id="rotateRightBtn" title="Rotate Right">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="grid" title="Grid View">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button class="view-btn" data-view="list" title="List View">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Images Grid -->
+                <div class="images-container glass-card">
+                    <div class="images-grid" id="imagesGrid">
+                        <!-- Dynamic content -->
+                    </div>
+                    <div class="drag-hint" id="dragHint">
+                        <i class="fas fa-arrows-alt"></i>
+                        Drag to reorder images
+                    </div>
+                </div>
+
+                <!-- Settings Panel -->
+                <div class="settings-panel glass-card">
+                    <h3><i class="fas fa-cog"></i> PDF Settings</h3>
+
+                    <!-- Settings Tabs -->
+                    <div class="settings-tabs">
+                        <button class="tab-btn active" data-tab="page">Page</button>
+                        <button class="tab-btn" data-tab="image">Image</button>
+                        <button class="tab-btn" data-tab="watermark">Watermark</button>
+                        <button class="tab-btn" data-tab="advanced">Advanced</button>
+                    </div>
+
+                    <!-- Page Tab -->
+                    <div class="tab-content active" id="tab-page">
+                        <div class="settings-grid">
+                            <div class="setting-group">
+                                <label>Page Size</label>
+                                <select id="pageSize" class="select-input">
+                                    <option value="a4">A4 (210 × 297 mm)</option>
+                                    <option value="letter">Letter (8.5 × 11 in)</option>
+                                    <option value="legal">Legal (8.5 × 14 in)</option>
+                                    <option value="a3">A3 (297 × 420 mm)</option>
+                                    <option value="a5">A5 (148 × 210 mm)</option>
+                                    <option value="fit">Fit to Image</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Orientation</label>
+                                <div class="orientation-toggle">
+                                    <button class="orient-btn active" data-orient="portrait">
+                                        <i class="fas fa-mobile-alt"></i>
+                                        Portrait
+                                    </button>
+                                    <button class="orient-btn" data-orient="landscape">
+                                        <i class="fas fa-mobile-alt fa-rotate-90"></i>
+                                        Landscape
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Margin</label>
+                                <div class="margin-control">
+                                    <input type="range" id="marginRange" min="0" max="50" value="10">
+                                    <span id="marginValue">10mm</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Background Color</label>
+                                <div class="color-picker-wrap">
+                                    <input type="color" id="bgColor" value="#ffffff">
+                                    <span id="bgColorValue">#FFFFFF</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Page Layout</label>
+                                <select id="pageLayout" class="select-input">
+                                    <option value="1">1 Image per Page</option>
+                                    <option value="2">2 Images per Page</option>
+                                    <option value="4">4 Images per Page (Grid)</option>
+                                    <option value="6">6 Images per Page</option>
+                                    <option value="9">9 Images per Page</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="addPageNumbers">
+                                    <span class="checkmark"></span>
+                                    Add Page Numbers
+                                </label>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>PDF Filename</label>
+                                <input type="text" id="pdfTitle" class="text-input" placeholder="my-document">
+                            </div>
+
+                            <!-- Estimated Size -->
+                            <div class="estimate-info">
+                                <i class="fas fa-info-circle"></i>
+                                <span id="estimateInfo">Estimated size: Calculating...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Image Tab -->
+                    <div class="tab-content" id="tab-image">
+                        <div class="settings-grid">
+                            <div class="setting-group">
+                                <label>Image Fit</label>
+                                <select id="imageFit" class="select-input">
+                                    <option value="contain">Fit Inside (Maintain Ratio)</option>
+                                    <option value="cover">Fill Page (Crop if needed)</option>
+                                    <option value="stretch">Stretch to Fill</option>
+                                    <option value="original">Original Size</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Image Quality</label>
+                                <div class="quality-control">
+                                    <input type="range" id="qualityRange" min="0.1" max="1" step="0.1" value="0.9">
+                                    <span id="qualityValue">90%</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Brightness</label>
+                                <div class="filter-control">
+                                    <input type="range" id="brightnessRange" min="50" max="150" value="100">
+                                    <span id="brightnessValue">100%</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Contrast</label>
+                                <div class="filter-control">
+                                    <input type="range" id="contrastRange" min="50" max="150" value="100">
+                                    <span id="contrastValue">100%</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Saturation</label>
+                                <div class="filter-control">
+                                    <input type="range" id="saturationRange" min="0" max="200" value="100">
+                                    <span id="saturationValue">100%</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Image Border</label>
+                                <select id="imageBorder" class="select-input">
+                                    <option value="none">No Border</option>
+                                    <option value="thin">Thin Border</option>
+                                    <option value="medium">Medium Border</option>
+                                    <option value="thick">Thick Border</option>
+                                    <option value="shadow">Drop Shadow</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Border Color</label>
+                                <div class="color-picker-wrap">
+                                    <input type="color" id="borderColor" value="#000000">
+                                    <span id="borderColorValue">#000000</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="grayscale">
+                                    <span class="checkmark"></span>
+                                    Convert to Grayscale
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Watermark Tab -->
+                    <div class="tab-content" id="tab-watermark">
+                        <div class="settings-grid">
+                            <div class="setting-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableWatermark">
+                                    <span class="checkmark"></span>
+                                    Enable Watermark
+                                </label>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Watermark Text</label>
+                                <input type="text" id="watermarkText" class="text-input" placeholder="CONFIDENTIAL">
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Font Size</label>
+                                <div class="filter-control">
+                                    <input type="range" id="watermarkSize" min="20" max="100" value="48">
+                                    <span id="watermarkSizeValue">48px</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Watermark Color</label>
+                                <div class="color-picker-wrap">
+                                    <input type="color" id="watermarkColor" value="#cccccc">
+                                    <span id="watermarkColorValue">#CCCCCC</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Opacity</label>
+                                <div class="filter-control">
+                                    <input type="range" id="watermarkOpacity" min="0.1" max="1" step="0.1" value="0.3">
+                                    <span id="watermarkOpacityValue">30%</span>
+                                </div>
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Position</label>
+                                <select id="watermarkPosition" class="select-input">
+                                    <option value="center">Center</option>
+                                    <option value="diagonal">Diagonal</option>
+                                    <option value="top">Top</option>
+                                    <option value="bottom">Bottom</option>
+                                    <option value="tile">Tile (Repeat)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Tab -->
+                    <div class="tab-content" id="tab-advanced">
+                        <div class="settings-grid">
+                            <div class="setting-group">
+                                <label>Header Text</label>
+                                <input type="text" id="headerText" class="text-input" placeholder="Document Header">
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Footer Text</label>
+                                <input type="text" id="footerText" class="text-input" placeholder="Document Footer">
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Author</label>
+                                <input type="text" id="pdfAuthor" class="text-input" placeholder="Your Name">
+                            </div>
+
+                            <div class="setting-group">
+                                <label>Compression</label>
+                                <select id="compression" class="select-input">
+                                    <option value="none">No Compression (Best Quality)</option>
+                                    <option value="low" selected>Low Compression</option>
+                                    <option value="medium">Medium Compression</option>
+                                    <option value="high">High Compression (Smallest Size)</option>
+                                </select>
+                            </div>
+
+                            <div class="setting-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="autoEnhance">
+                                    <span class="checkmark"></span>
+                                    Auto-Enhance Images
+                                </label>
+                            </div>
+
+                            <div class="setting-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="preserveExif">
+                                    <span class="checkmark"></span>
+                                    Preserve Image Metadata
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button class="btn btn-generate" id="generateBtn">
+                        <i class="fas fa-file-pdf"></i>
+                        Generate PDF
+                        <span class="btn-shine"></span>
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Progress Modal -->
+        <div class="modal-overlay" id="progressModal">
+            <div class="modal glass-card">
+                <div class="progress-icon">
+                    <i class="fas fa-cog fa-spin"></i>
+                </div>
+                <h3>Generating PDF...</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-text" id="progressText">Processing images...</p>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div class="modal-overlay" id="successModal">
+            <div class="modal glass-card success-modal">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>PDF Downloaded!</h3>
+                <p>Your PDF has been saved to Downloads</p>
+                <div class="modal-actions">
+                    <button class="btn btn-primary" id="newConversionBtn">
+                        <i class="fas fa-plus"></i>
+                        New Conversion
+                    </button>
+                    <button class="btn btn-secondary" id="closeModalBtn">
+                        <i class="fas fa-times"></i>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Preview Modal -->
+        <div class="modal-overlay" id="previewModal">
+            <div class="preview-container">
+                <button class="preview-close" id="closePreview">
+                    <i class="fas fa-times"></i>
+                </button>
+                <button class="preview-nav prev" id="prevImage">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <img src="" alt="Preview" id="previewImage">
+                <button class="preview-nav next" id="nextImage">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <div class="preview-info">
+                    <span id="previewInfo"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast" id="toast">
+            <i class="toast-icon"></i>
+            <span class="toast-message"></span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
