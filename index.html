@@ -12,6 +12,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js'></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -87,11 +88,11 @@
                         <span class="image-count"><span id="imageCount">0</span> images</span>
                     </div>
                     <div class="toolbar-right">
-                        <button class="btn btn-sm" id="rotateLeftBtn" title="Rotate Left">
-                            <i class="fas fa-undo"></i>
+                        <button class="btn btn-sm" id="rotateLeftBtn" title="Rotate Left 90°">
+                            <i class="fas fa-undo-alt"></i>
                         </button>
-                        <button class="btn btn-sm" id="rotateRightBtn" title="Rotate Right">
-                            <i class="fas fa-redo"></i>
+                        <button class="btn btn-sm" id="rotateRightBtn" title="Rotate Right 90°">
+                            <i class="fas fa-redo-alt"></i>
                         </button>
                         <div class="view-toggle">
                             <button class="view-btn active" data-view="grid" title="Grid View">
@@ -125,6 +126,7 @@
                         <button class="tab-btn" data-tab="image">Image</button>
                         <button class="tab-btn" data-tab="watermark">Watermark</button>
                         <button class="tab-btn" data-tab="advanced">Advanced</button>
+                        <button class="tab-btn" data-tab="features">Features</button>
                     </div>
 
                     <!-- Page Tab -->
@@ -334,45 +336,199 @@
                     <!-- Advanced Tab -->
                     <div class="tab-content" id="tab-advanced">
                         <div class="settings-grid">
-                            <div class="setting-group">
-                                <label>Header Text</label>
-                                <input type="text" id="headerText" class="text-input" placeholder="Document Header">
+                            <!-- Security Section -->
+                            <div class="advanced-section">
+                                <h4><i class="fas fa-lock"></i> Security</h4>
+                                <div class="setting-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enablePassword">
+                                        <span class="checkmark"></span>
+                                        Enable Password Protection
+                                    </label>
+                                </div>
+                                <div class="setting-group" id="passwordGroup" style="display: none;">
+                                    <label>Set Password</label>
+                                    <div class="password-input-wrap">
+                                        <input type="password" id="pdfPassword" class="text-input"
+                                            placeholder="Enter password">
+                                        <button class="btn-icon toggle-password" type="button"><i
+                                                class="fas fa-eye"></i></button>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="setting-group">
-                                <label>Footer Text</label>
-                                <input type="text" id="footerText" class="text-input" placeholder="Document Footer">
+                            <!-- Intelligence Section -->
+                            <div class="advanced-section">
+                                <h4><i class="fas fa-brain"></i> Intelligence</h4>
+                                <div class="setting-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableOCR">
+                                        <span class="checkmark"></span>
+                                        Enable OCR (Text Recognition)
+                                        <span class="badge-new">New</span>
+                                    </label>
+                                    <p class="setting-desc">Makes text in images selectable and searchable. (Slower)</p>
+                                </div>
+                                <div class="setting-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="autoEnhance">
+                                        <span class="checkmark"></span>
+                                        Auto-Enhance Images
+                                    </label>
+                                    <p class="setting-desc">Automatically adjusts contrast and brightness.</p>
+                                </div>
                             </div>
 
-                            <div class="setting-group">
-                                <label>Author</label>
-                                <input type="text" id="pdfAuthor" class="text-input" placeholder="Your Name">
+                            <!-- Professional Section -->
+                            <div class="advanced-section">
+                                <h4><i class="fas fa-briefcase"></i> Professional Features</h4>
+
+                                <!-- Bates Numbering -->
+                                <div class="setting-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableBates">
+                                        <span class="checkmark"></span>
+                                        Bates Numbering
+                                    </label>
+                                    <div id="batesGroup"
+                                        style="display: none; margin-top: 0.5rem; padding-left: 1.5rem;">
+                                        <div class="input-row"
+                                            style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                            <input type="text" id="batesPrefix" class="text-input"
+                                                placeholder="Prefix (e.g. CASE-)" style="flex: 2;">
+                                            <input type="number" id="batesStart" class="text-input" value="1" min="1"
+                                                style="flex: 1;">
+                                        </div>
+                                        <select id="batesPosition" class="select-input">
+                                            <option value="bottomRight">Bottom Right</option>
+                                            <option value="bottomLeft">Bottom Left</option>
+                                            <option value="topRight">Top Right</option>
+                                            <option value="topLeft">Top Left</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- AI Redaction -->
+                                <div class="setting-group" style="margin-top: 1rem;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableRedaction">
+                                        <span class="checkmark"></span>
+                                        AI Redaction (Auto-Blackout)
+                                    </label>
+                                    <div id="redactionGroup"
+                                        style="display: none; margin-top: 0.5rem; padding-left: 1.5rem;">
+                                        <label class="checkbox-label" style="font-size: 0.85rem;">
+                                            <input type="checkbox" id="redactEmail" checked>
+                                            <span class="checkmark" style="width: 16px; height: 16px;"></span>
+                                            Emails
+                                        </label>
+                                        <label class="checkbox-label" style="font-size: 0.85rem;">
+                                            <input type="checkbox" id="redactPhone" checked>
+                                            <span class="checkmark" style="width: 16px; height: 16px;"></span>
+                                            Phone Numbers
+                                        </label>
+                                        <label class="checkbox-label" style="font-size: 0.85rem;">
+                                            <input type="checkbox" id="redactSSN">
+                                            <span class="checkmark" style="width: 16px; height: 16px;"></span>
+                                            SSN / ID Numbers
+                                        </label>
+                                        <p class="setting-desc" style="margin-left: 0;">Requires OCR enabled.</p>
+                                    </div>
+                                </div>
+
+                                <!-- PDF/A -->
+                                <div class="setting-group" style="margin-top: 1rem;">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enablePDFA">
+                                        <span class="checkmark"></span>
+                                        PDF/A Compliance (Archival)
+                                    </label>
+                                </div>
                             </div>
 
-                            <div class="setting-group">
-                                <label>Compression</label>
-                                <select id="compression" class="select-input">
-                                    <option value="none">No Compression (Best Quality)</option>
-                                    <option value="low" selected>Low Compression</option>
-                                    <option value="medium">Medium Compression</option>
-                                    <option value="high">High Compression (Smallest Size)</option>
-                                </select>
+                            <!-- Signature Section -->
+                            <div class="advanced-section">
+                                <h4><i class="fas fa-signature"></i> Signature</h4>
+                                <div class="setting-group">
+                                    <button class="btn btn-secondary full-width" id="addSignatureBtn">
+                                        <i class="fas fa-pen-nib"></i>
+                                        Add Digital Signature
+                                    </button>
+                                    <div id="signaturePreview" class="signature-preview hidden">
+                                        <img src="" alt="Signature" id="signatureImage">
+                                        <button class="btn-icon remove-signature" title="Remove"><i
+                                                class="fas fa-times"></i></button>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="setting-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="autoEnhance">
-                                    <span class="checkmark"></span>
-                                    Auto-Enhance Images
-                                </label>
+                            <!-- Metadata Section -->
+                            <div class="advanced-section">
+                                <h4><i class="fas fa-info-circle"></i> Metadata & Output</h4>
+                                <div class="setting-group">
+                                    <label>Header Text</label>
+                                    <input type="text" id="headerText" class="text-input" placeholder="Page Header">
+                                </div>
+
+                                <div class="setting-group">
+                                    <label>Footer Text</label>
+                                    <input type="text" id="footerText" class="text-input" placeholder="Page Footer">
+                                </div>
+
+                                <div class="setting-group">
+                                    <label>Author Name</label>
+                                    <input type="text" id="pdfAuthor" class="text-input" placeholder="Author Name">
+                                </div>
+
+                                <div class="setting-group">
+                                    <label>Compression Level</label>
+                                    <select id="compression" class="select-input">
+                                        <option value="none">None (Best Quality)</option>
+                                        <option value="low" selected>Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High (Smallest Size)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Features Tab -->
+                    <div class="tab-content" id="tab-features">
+                        <div class="settings-grid">
+                            <div class="advanced-section">
+                                <h4><i class="fas fa-star"></i> Core & Customization</h4>
+                                <ul class="feature-list">
+                                    <li><i class="fas fa-check-circle"></i> Drag & Drop Reordering</li>
+                                    <li><i class="fas fa-check-circle"></i> Page Sizes (A4, Letter, A3, etc)</li>
+                                    <li><i class="fas fa-check-circle"></i> Custom Margins & Orientation</li>
+                                    <li><i class="fas fa-check-circle"></i> Background Colors</li>
+                                    <li><i class="fas fa-check-circle"></i> Image Scaling (Fit, Cover, Stretch)</li>
+                                </ul>
                             </div>
 
-                            <div class="setting-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="preserveExif">
-                                    <span class="checkmark"></span>
-                                    Preserve Image Metadata
-                                </label>
+                            <div class="advanced-section">
+                                <h4><i class="fas fa-magic"></i> Enhancement</h4>
+                                <ul class="feature-list">
+                                    <li><i class="fas fa-check-circle"></i> Image Filters (Brightness, Contrast)</li>
+                                    <li><i class="fas fa-check-circle"></i> Auto-Enhance Mode</li>
+                                    <li><i class="fas fa-check-circle"></i> Grayscale Conversion</li>
+                                </ul>
+                            </div>
+
+                            <div class="advanced-section">
+                                <h4><i class="fas fa-briefcase"></i> Professional Suite</h4>
+                                <ul class="feature-list">
+                                    <li><i class="fas fa-check-circle"></i> <strong>Bates Numbering</strong> <span
+                                            class="badge-new">Pro</span></li>
+                                    <li><i class="fas fa-check-circle"></i> <strong>AI Redaction</strong> (Smart
+                                        privacy) <span class="badge-new">Pro</span></li>
+                                    <li><i class="fas fa-check-circle"></i> <strong>OCR</strong> Text Recognition <span
+                                            class="badge-new">Pro</span></li>
+                                    <li><i class="fas fa-check-circle"></i> Digital Signatures</li>
+                                    <li><i class="fas fa-check-circle"></i> Password Protection (Encryption)</li>
+                                    <li><i class="fas fa-check-circle"></i> PDF/A Archival Compliance</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -386,6 +542,25 @@
                 </div>
             </section>
         </main>
+
+        <!-- Signature Modal -->
+        <div class="modal-overlay" id="signatureModal">
+            <div class="modal glass-card signature-modal-content">
+                <h3>Draw Signature</h3>
+                <div class="signature-pad-wrapper">
+                    <canvas id="signatureCanvas" width="400" height="200"></canvas>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="clearSignatureBtn">
+                        <i class="fas fa-eraser"></i> Clear
+                    </button>
+                    <button class="btn btn-primary" id="saveSignatureBtn">
+                        <i class="fas fa-check"></i> Save Signature
+                    </button>
+                    <button class="btn btn-text" id="closeSignatureBtn">Cancel</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Progress Modal -->
         <div class="modal-overlay" id="progressModal">

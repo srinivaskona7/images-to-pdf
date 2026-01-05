@@ -494,7 +494,7 @@ body {
 
 .image-card .card-actions {
     position: absolute;
-    bottom: 0.5rem;
+    bottom: 2.5rem;
     left: 0;
     right: 0;
     display: flex;
@@ -502,6 +502,7 @@ body {
     gap: 0.25rem;
     opacity: 0;
     transition: opacity 0.3s;
+    z-index: 10;
 }
 
 .image-card:hover .card-actions {
@@ -767,11 +768,12 @@ body {
 /* Settings Tabs */
 .settings-tabs {
     display: flex;
-    gap: 0.25rem;
+    flex-wrap: wrap;
+    gap: 0.4rem;
     margin-bottom: 1.5rem;
     background: var(--bg-tertiary);
     border-radius: var(--radius-md);
-    padding: 0.25rem;
+    padding: 0.4rem;
 }
 
 .tab-btn {
@@ -1140,4 +1142,145 @@ body {
     .preview-nav.next {
         right: 10px;
     }
+}
+
+/* Advanced Settings Sections */
+.advanced-section {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.advanced-section h4 {
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.setting-desc {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    margin-top: 0.25rem;
+    margin-left: 1.8rem;
+}
+
+.password-input-wrap {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.toggle-password {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem;
+}
+
+/* Badge */
+.badge-new {
+    background: var(--primary);
+    color: white;
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 1rem;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+/* Signature & Canvas */
+.signature-modal-content {
+    width: 600px;
+    max-width: 95vw;
+}
+
+.signature-pad-wrapper {
+    background: white;
+    border-radius: var(--radius-sm);
+    margin: 1rem 0;
+    overflow: hidden;
+    cursor: crosshair;
+    border: 2px dashed #ccc;
+    touch-action: none;
+    /* Prevent scroll on touch */
+}
+
+#signatureCanvas {
+    width: 100%;
+    height: 250px;
+    display: block;
+    background: #fff;
+}
+
+.signature-preview {
+    margin-top: 1rem;
+    position: relative;
+    border: 1px dashed var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem;
+    display: flex;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.5);
+    min-height: 60px;
+    align-items: center;
+}
+
+.signature-preview.hidden {
+    display: none;
+}
+
+.signature-preview img {
+    max-height: 80px;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.remove-signature {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: var(--danger);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Feature List */
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.feature-list li {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feature-list li i {
+    color: var(--success);
+    font-size: 0.9rem;
+}
+
+.feature-list li strong {
+    color: var(--text-primary);
+    font-weight: 600;
 }

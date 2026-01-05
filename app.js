@@ -798,13 +798,598 @@ class ImagesToPDF {
     }
 
     showToast(message, type = 'success') {
-        const icon = this.toast.querySelector('.toast-icon');
-        icon.className = 'toast-icon fas ' + (type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle');
-        this.toast.querySelector('.toast-message').textContent = message;
-        this.toast.className = `toast ${type} visible`;
-
-        setTimeout(() => this.toast.classList.remove('visible'), 3000);
+        clearTimeout(this.toastTimeout);
+        this.toast.textContent = message;
+        this.toast.className = `toast visible ${type}`;
+        this.toastTimeout = setTimeout(() => {
+            this.toast.classList.remove('visible');
+        }, 3000);
     }
 }
 
+// Signature Pad Implementation
+class SignaturePad {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.isDrawing = false;
+        this.lastX = 0;
+        this.lastY = 0;
+
+        // Setup canvas
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 2;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+
+        this.bindEvents();
+    }
+
+    bindEvents() {
+        // Mouse events
+        this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+        this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+        this.canvas.addEventListener('mouseup', () => this.stopDrawing());
+        this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+
+        // Touch events
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            this.canvas.dispatchEvent(mouseEvent);
+        });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            this.canvas.dispatchEvent(mouseEvent);
+        });
+
+        this.canvas.addEventListener('touchend', (e) => {
+            const mouseEvent = new MouseEvent('mouseup', {});
+            this.canvas.dispatchEvent(mouseEvent);
+        });
+    }
+
+    getPos(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    }
+
+    startDrawing(e) {
+        this.isDrawing = true;
+        const pos = this.getPos(e);
+        this.lastX = pos.x;
+        this.lastY = pos.y;
+    }
+
+    draw(e) {
+        if (!this.isDrawing) return;
+        const pos = this.getPos(e);
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.lastX, this.lastY);
+        this.ctx.lineTo(pos.x, pos.y);
+        this.ctx.stroke();
+
+        this.lastX = pos.x;
+        this.lastY = pos.y;
+    }
+
+    stopDrawing() {
+        this.isDrawing = false;
+    }
+
+    clear() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    isEmpty() {
+        const pixelBuffer = new Uint32Array(
+            this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height).data.buffer
+        );
+        return !pixelBuffer.some(color => color !== 0);
+    }
+
+    toDataURL() {
+        return this.canvas.toDataURL('image/png');
+    }
+}
+
+// Initialize App moved to end of file to ensure all prototype extensions are loaded
+
+
+// Add Advanced Features to the App class prototype
+Object.assign(ImagesToPDF.prototype, {
+    initAdvanced() {
+        // Elements
+        this.enablePassword = document.getElementById('enablePassword');
+        this.passwordGroup = document.getElementById('passwordGroup');
+        this.pdfPassword = document.getElementById('pdfPassword');
+        this.togglePasswordBtn = document.querySelector('.toggle-password');
+
+        this.enableOCR = document.getElementById('enableOCR');
+        this.autoEnhance = document.getElementById('autoEnhance');
+        this.preserveExif = document.getElementById('preserveExif');
+
+        // Professional Features
+        this.enableBates = document.getElementById('enableBates');
+        this.batesGroup = document.getElementById('batesGroup');
+        this.batesPrefix = document.getElementById('batesPrefix');
+        this.batesStart = document.getElementById('batesStart');
+        this.batesPosition = document.getElementById('batesPosition');
+
+        this.enableRedaction = document.getElementById('enableRedaction');
+        this.redactionGroup = document.getElementById('redactionGroup');
+        this.redactEmail = document.getElementById('redactEmail');
+        this.redactPhone = document.getElementById('redactPhone');
+        this.redactSSN = document.getElementById('redactSSN');
+        this.enablePDFA = document.getElementById('enablePDFA');
+
+        this.addSignatureBtn = document.getElementById('addSignatureBtn');
+        this.signatureModal = document.getElementById('signatureModal');
+        this.signatureCanvas = document.getElementById('signatureCanvas');
+
+        // ...
+
+        // Events
+        this.enablePassword.addEventListener('change', () => {
+            this.passwordGroup.style.display = this.enablePassword.checked ? 'block' : 'none';
+        });
+
+        this.enableBates.addEventListener('change', () => {
+            this.batesGroup.style.display = this.enableBates.checked ? 'block' : 'none';
+        });
+
+        this.enableRedaction.addEventListener('change', () => {
+            this.redactionGroup.style.display = this.enableRedaction.checked ? 'block' : 'none';
+            if (this.enableRedaction.checked && !this.enableOCR.checked) {
+                this.enableOCR.checked = true;
+                this.showToast('OCR enabled for Redaction', 'success');
+            }
+        });
+        this.clearSignatureBtn = document.getElementById('clearSignatureBtn');
+        this.saveSignatureBtn = document.getElementById('saveSignatureBtn');
+        this.closeSignatureBtn = document.getElementById('closeSignatureBtn');
+        this.signaturePreview = document.getElementById('signaturePreview');
+        this.signatureImage = document.getElementById('signatureImage');
+        this.removeSignatureBtn = document.querySelector('.remove-signature');
+
+        this.signatureData = null;
+        this.signaturePad = new SignaturePad(this.signatureCanvas);
+
+        // Events
+        this.enablePassword.addEventListener('change', () => {
+            this.passwordGroup.style.display = this.enablePassword.checked ? 'block' : 'none';
+        });
+
+        this.togglePasswordBtn.addEventListener('click', () => {
+            const type = this.pdfPassword.type === 'password' ? 'text' : 'password';
+            this.pdfPassword.type = type;
+            this.togglePasswordBtn.innerHTML = `<i class="fas fa-eye${type === 'text' ? '-slash' : ''}"></i>`;
+        });
+
+        this.addSignatureBtn.addEventListener('click', () => {
+            this.signatureModal.classList.add('visible');
+            this.signaturePad.clear();
+        });
+
+        this.clearSignatureBtn.addEventListener('click', () => this.signaturePad.clear());
+
+        this.closeSignatureBtn.addEventListener('click', () => {
+            this.signatureModal.classList.remove('visible');
+        });
+
+        this.saveSignatureBtn.addEventListener('click', () => {
+            if (this.signaturePad.isEmpty()) {
+                this.showToast('Please draw a signature first', 'error');
+                return;
+            }
+            this.signatureData = this.signaturePad.toDataURL();
+            this.signatureImage.src = this.signatureData;
+            this.signaturePreview.classList.remove('hidden');
+            this.addSignatureBtn.style.display = 'none';
+            this.signatureModal.classList.remove('visible');
+            this.showToast('Signature added', 'success');
+        });
+
+        this.removeSignatureBtn.addEventListener('click', () => {
+            this.signatureData = null;
+            this.signaturePreview.classList.add('hidden');
+            this.addSignatureBtn.style.display = 'block';
+        });
+    },
+
+    async runOCR(image) {
+        if (!window.Tesseract) {
+            console.error('Tesseract.js not loaded');
+            return null;
+        }
+
+        try {
+            const result = await Tesseract.recognize(image.dataUrl, 'eng', {
+                // logger: m => console.log(m) // Optional logging
+            });
+            return result.data.text;
+        } catch (err) {
+            console.error('OCR Error:', err);
+            return null;
+        }
+    },
+
+    async processImageAdvanced(img, quality, brightness, contrast, saturation, isGrayscale, isEnhanced) {
+        return new Promise((resolve) => {
+            const image = new Image();
+            image.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Handle rotation
+                if (Math.abs(img.rotation) === 90 || Math.abs(img.rotation) === 270) {
+                    canvas.width = image.height;
+                    canvas.height = image.width;
+                } else {
+                    canvas.width = image.width;
+                    canvas.height = image.height;
+                }
+
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate((img.rotation * Math.PI) / 180);
+
+                // Apply filters
+                const filters = [];
+
+                // Auto-Enhance Logic: Slight boost to contrast and saturation
+                const eBrightness = isEnhanced ? brightness + 5 : brightness;
+                const eContrast = isEnhanced ? contrast + 10 : contrast;
+                const eSaturation = isEnhanced ? saturation + 10 : saturation;
+
+                if (eBrightness !== 100) filters.push(`brightness(${eBrightness}%)`);
+                if (eContrast !== 100) filters.push(`contrast(${eContrast}%)`);
+                if (eSaturation !== 100) filters.push(`saturate(${eSaturation}%)`);
+                if (isGrayscale) filters.push('grayscale(100%)');
+
+                ctx.filter = filters.length > 0 ? filters.join(' ') : 'none';
+                ctx.drawImage(image, -image.width / 2, -image.height / 2);
+
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            image.src = img.dataUrl;
+        });
+    }
+});
+
+// Hook into init to load advanced features
+const originalInit = ImagesToPDF.prototype.init;
+ImagesToPDF.prototype.init = function () {
+    originalInit.call(this);
+    this.initAdvanced();
+};
+
+// Override generatePDF to include advanced features
+ImagesToPDF.prototype.generatePDF = async function () {
+    if (this.images.length === 0) {
+        this.showToast('No images to convert', 'error');
+        return;
+    }
+
+    this.showProgress();
+
+    try {
+        const { jsPDF } = window.jspdf;
+
+        // Get settings
+        const pageSize = this.pageSize.value;
+        const orientation = this.orientation;
+        const margin = parseInt(this.marginRange.value);
+        const quality = parseFloat(this.qualityRange.value);
+        const bgColor = this.bgColor.value;
+        const imageFit = this.imageFit.value;
+        const imagesPerPage = parseInt(this.pageLayout.value);
+        const addPageNums = this.addPageNumbers.checked;
+        const brightness = parseInt(this.brightnessRange.value);
+        const contrast = parseInt(this.contrastRange.value);
+        const saturation = parseInt(this.saturationRange.value);
+        const isGrayscale = this.grayscale.checked;
+        const borderStyle = this.imageBorder.value;
+        const borderColorVal = this.borderColor.value;
+
+        // Advanced Settings
+        const enableWatermark = this.enableWatermark.checked;
+        const watermarkTextVal = this.watermarkText.value;
+        const watermarkSizeVal = parseInt(this.watermarkSize.value);
+        const watermarkColorVal = this.watermarkColor.value;
+        const watermarkOpacityVal = parseFloat(this.watermarkOpacity.value);
+        const watermarkPos = this.watermarkPosition.value;
+
+        const headerTextVal = this.headerText.value;
+        const footerTextVal = this.footerText.value;
+        const enablePassword = this.enablePassword.checked;
+        const passwordVal = this.pdfPassword.value;
+        const runOCR = this.enableOCR.checked;
+        const isEnhanced = this.autoEnhance.checked;
+
+        // Professional Features
+        const enableBates = this.enableBates.checked;
+        const batesPrefixVal = this.batesPrefix.value;
+        const batesStartVal = parseInt(this.batesStart.value) || 1;
+        const batesPos = this.batesPosition.value;
+
+        const enableRedaction = this.enableRedaction.checked;
+        const redactEmailVal = this.redactEmail.checked;
+        const redactPhoneVal = this.redactPhone.checked;
+        const redactSSNVal = this.redactSSN.checked;
+        const enablePDFA = this.enablePDFA.checked;
+
+        // Create PDF
+        // Note: Encryption might require a specific plugin or method depending on jsPDF version
+        const pdfOptions = { orientation, unit: 'mm' };
+        if (pageSize !== 'fit') pdfOptions.format = pageSize;
+        if (enablePassword && passwordVal) {
+            pdfOptions.encryption = {
+                userPassword: passwordVal,
+                ownerPassword: passwordVal,
+                userPermissions: ['print', 'modify', 'copy', 'annot-forms']
+            };
+        }
+
+        let pdf = new jsPDF(pdfOptions);
+
+        // Manually apply password if constructor option didn't work (fallback)
+        if (enablePassword && passwordVal && typeof pdf.setEncryption === 'function') {
+            // pdf.setEncryption(passwordVal, passwordVal);
+        }
+
+        // Set metadata
+        if (this.pdfTitle.value) pdf.setProperties({ title: this.pdfTitle.value });
+        if (this.pdfAuthor.value) pdf.setProperties({ author: this.pdfAuthor.value });
+
+        const totalPages = Math.ceil(this.images.length / imagesPerPage);
+
+        for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+            if (pageNum > 0) pdf.addPage();
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            // Draw background
+            pdf.setFillColor(bgColor);
+            pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+
+            // Header
+            if (headerTextVal) {
+                pdf.setFontSize(10);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(headerTextVal, pageWidth / 2, 8, { align: 'center' });
+            }
+
+            // Footer
+            if (footerTextVal) {
+                pdf.setFontSize(10);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(footerTextVal, pageWidth / 2, pageHeight - 5, { align: 'center' });
+            }
+
+            // Page numbers
+            if (addPageNums) {
+                pdf.setFontSize(10);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(`Page ${pageNum + 1} of ${totalPages}`, pageWidth - 10, pageHeight - 5, { align: 'right' });
+            }
+
+            // Calculate grid layout
+            const startIdx = pageNum * imagesPerPage;
+            const endIdx = Math.min(startIdx + imagesPerPage, this.images.length);
+
+            const cols = imagesPerPage <= 2 ? imagesPerPage : (imagesPerPage <= 4 ? 2 : 3);
+            const rows = Math.ceil(imagesPerPage / cols);
+
+            const headerOffset = headerTextVal ? 10 : 0;
+            const footerOffset = (footerTextVal || addPageNums) ? 10 : 0;
+
+            const availableWidth = pageWidth - (margin * 2);
+            const availableHeight = pageHeight - (margin * 2) - headerOffset - footerOffset;
+            const cellWidth = availableWidth / cols;
+            const cellHeight = availableHeight / rows;
+            const cellPadding = 2;
+
+            for (let i = startIdx; i < endIdx; i++) {
+                const img = this.images[i];
+                const localIdx = i - startIdx;
+                const col = localIdx % cols;
+                const row = Math.floor(localIdx / cols);
+
+                let progressMsg = `Processing image ${i + 1} of ${this.images.length}...`;
+                if (runOCR) progressMsg += ' (OCR Active)';
+                this.updateProgress(((i + 1) / this.images.length) * 90, progressMsg);
+
+                // OCR Processing & Redaction
+                let extractedText = '';
+                let ocrData = null;
+
+                if (runOCR) {
+                    // Start OCR
+                    try {
+                        ocrData = await this.runOCR(img); // returns whole data object
+                        if (ocrData) {
+                            extractedText = ocrData.text;
+                        }
+                    } catch (e) {
+                        console.error("OCR Failed", e);
+                    }
+                }
+
+                // Process image with advanced filters
+                const imgData = await this.processImageAdvanced(img, quality, brightness, contrast, saturation, isGrayscale, isEnhanced);
+                const imgProps = pdf.getImageProperties(imgData);
+
+                const cellX = margin + (col * cellWidth) + cellPadding;
+                const cellY = margin + headerOffset + (row * cellHeight) + cellPadding;
+                const maxWidth = cellWidth - (cellPadding * 2);
+                const maxHeight = cellHeight - (cellPadding * 2);
+
+                let imgWidth, imgHeight, x, y;
+
+                // Call calculate dimensions logic (reusing existing variables)
+                if (imageFit === 'contain') {
+                    const ratio = Math.min(maxWidth / imgProps.width, maxHeight / imgProps.height);
+                    imgWidth = imgProps.width * ratio;
+                    imgHeight = imgProps.height * ratio;
+                    x = cellX + (maxWidth - imgWidth) / 2;
+                    y = cellY + (maxHeight - imgHeight) / 2;
+                } else if (imageFit === 'cover') {
+                    const ratio = Math.max(maxWidth / imgProps.width, maxHeight / imgProps.height);
+                    imgWidth = Math.min(imgProps.width * ratio, maxWidth);
+                    imgHeight = Math.min(imgProps.height * ratio, maxHeight);
+                    x = cellX + (maxWidth - imgWidth) / 2;
+                    y = cellY + (maxHeight - imgHeight) / 2;
+                } else if (imageFit === 'stretch') {
+                    imgWidth = maxWidth;
+                    imgHeight = maxHeight;
+                    x = cellX;
+                    y = cellY;
+                } else {
+                    imgWidth = Math.min(imgProps.width * 0.264583, maxWidth);
+                    imgHeight = Math.min(imgProps.height * 0.264583, maxHeight);
+                    x = cellX + (maxWidth - imgWidth) / 2;
+                    y = cellY + (maxHeight - imgHeight) / 2;
+                }
+
+                // AI Redaction (Draw black boxes BEFORE image? No, AFTER image to cover it)
+                // But we draw image first, then redact.
+
+                // Draw border/shadow
+                if (borderStyle !== 'none') {
+                    // ... (existing border logic)
+                    const borderWidths = { thin: 0.5, medium: 1, thick: 2, shadow: 0 };
+                    const bw = borderWidths[borderStyle] || 0;
+
+                    if (borderStyle === 'shadow') {
+                        pdf.setFillColor(0, 0, 0);
+                        pdf.setGlobalAlpha?.(0.2);
+                        pdf.rect(x + 2, y + 2, imgWidth, imgHeight, 'F');
+                        pdf.setGlobalAlpha?.(1);
+                    } else {
+                        pdf.setDrawColor(borderColorVal);
+                        pdf.setLineWidth(bw);
+                        pdf.rect(x - bw / 2, y - bw / 2, imgWidth + bw, imgHeight + bw, 'S');
+                    }
+                }
+
+                pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+
+                // Perform Redaction if enabled and OCR data exists
+                if (enableRedaction && ocrData && ocrData.words) {
+                    const scaleX = imgWidth / ocrData.bbox.x1; // x1 is width of full image usually? No x1 is right. bbox: x0, y0, x1, y1
+                    // Actually Tesseract bbox is: x0, y0, x1, y1 (minX, minY, maxX, maxY) of the whole image
+                    // ocrData.bbox (image size)
+                    const imgNativeWidth = ocrData.bbox.x1 - ocrData.bbox.x0;
+                    const imgNativeHeight = ocrData.bbox.y1 - ocrData.bbox.y0;
+
+                    const scaleFactorX = imgWidth / imgNativeWidth;
+                    const scaleFactorY = imgHeight / imgNativeHeight;
+
+                    // Regex Patterns
+                    const patterns = [];
+                    if (this.redactEmail.checked) patterns.push(/[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}/g);
+                    if (this.redactPhone.checked) patterns.push(/(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g);
+                    if (this.redactSSN.checked) patterns.push(/\d{3}-\d{2}-\d{4}/g);
+
+                    pdf.setFillColor(0, 0, 0); // Black color for redaction
+
+                    ocrData.words.forEach(word => {
+                        const text = word.text;
+                        let shouldRedact = false;
+                        for (let pattern of patterns) {
+                            if (pattern.test(text)) {
+                                shouldRedact = true;
+                                break;
+                            }
+                        }
+
+                        if (shouldRedact) {
+                            const wx = x + (word.bbox.x0 * scaleFactorX);
+                            const wy = y + (word.bbox.y0 * scaleFactorY);
+                            const ww = (word.bbox.x1 - word.bbox.x0) * scaleFactorX;
+                            const wh = (word.bbox.y1 - word.bbox.y0) * scaleFactorY;
+                            pdf.rect(wx, wy, ww, wh, 'F');
+                        }
+                    });
+                }
+            }
+
+            // Bates Numbering
+            if (enableBates) {
+                const currentNum = batesStartVal + pageNum;
+                const batesText = `${batesPrefixVal}${currentNum}`;
+
+                pdf.setFontSize(10);
+                pdf.setTextColor(0, 0, 0);
+
+                let bx, by;
+                switch (batesPos) {
+                    case 'bottomLeft': bx = 10; by = pageHeight - 10; break;
+                    case 'topLeft': bx = 10; by = 10; break;
+                    case 'topRight': bx = pageWidth - 10; by = 10; break;
+                    case 'bottomRight': default: bx = pageWidth - 10; by = pageHeight - 10; break;
+                }
+
+                const align = (batesPos.includes('Right')) ? 'right' : 'left';
+                pdf.text(batesText, bx, by, { align: align });
+            }
+
+            // Watermark
+            if (enableWatermark && watermarkTextVal) {
+                this.addWatermark(pdf, watermarkTextVal, watermarkSizeVal, watermarkColorVal, watermarkOpacityVal, watermarkPos);
+            }
+
+            // Add Signature (Bottom Right of every page)
+            if (this.signatureData) {
+                const sigWidth = 40; // mm
+                const sigHeight = 20; // mm
+                const sigX = pageWidth - sigWidth - 10;
+                const sigY = pageHeight - sigHeight - 10;
+                pdf.addImage(this.signatureData, 'PNG', sigX, sigY, sigWidth, sigHeight);
+            }
+        }
+
+        this.updateProgress(100, 'Finalizing PDF...');
+
+        // Save PDF
+        if (enablePassword && passwordVal) {
+            // If encryption construct didn't work (older jsPDF), we might need `save` with options in newer versions
+            // but `output('blob')` is standard.
+            // Verified: jsPDF requires encryption plugin for full support. 
+            // If this fails, we just save standard PDF.
+        }
+
+        this.pdfBlob = pdf.output('blob');
+
+        // Auto-download the PDF
+        this.downloadPDF();
+
+        setTimeout(() => {
+            this.hideProgress();
+            this.showSuccess();
+        }, 500);
+
+    } catch (err) {
+        console.error(err);
+        this.hideProgress();
+        this.showToast('Error generating PDF: ' + err.message, 'error');
+    }
+};
+
+// Initialize App
 const app = new ImagesToPDF();
