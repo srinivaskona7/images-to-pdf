@@ -127,6 +127,7 @@
                         <button class="tab-btn" data-tab="watermark">Watermark</button>
                         <button class="tab-btn" data-tab="advanced">Advanced</button>
                         <button class="tab-btn" data-tab="features">Features</button>
+                        <button class="tab-btn" data-tab="preview">Preview</button>
                     </div>
 
                     <!-- Page Tab -->
@@ -529,6 +530,43 @@
                                     <li><i class="fas fa-check-circle"></i> Password Protection (Encryption)</li>
                                     <li><i class="fas fa-check-circle"></i> PDF/A Archival Compliance</li>
                                 </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Tab -->
+                    <div class="tab-content" id="tab-preview">
+                        <div class="preview-panel">
+                            <div class="preview-controls">
+                                <div class="preview-left">
+                                    <span class="preview-label">Live Preview</span>
+                                </div>
+                                <div class="preview-pagination">
+                                    <button class="btn-icon btn-sm" id="prevPreviewPage" title="Previous Page"
+                                        disabled><i class="fas fa-chevron-left"></i></button>
+                                    <span id="previewPageNum">Page 1</span>
+                                    <button class="btn-icon btn-sm" id="nextPreviewPage" title="Next Page" disabled><i
+                                            class="fas fa-chevron-right"></i></button>
+                                </div>
+                                <div class="preview-actions">
+                                    <div class="preview-zoom">
+                                        <button class="btn-icon btn-sm" id="zoomOutBtn" title="Zoom Out"><i
+                                                class="fas fa-minus"></i></button>
+                                        <span id="zoomLevel">100%</span>
+                                        <button class="btn-icon btn-sm" id="zoomInBtn" title="Zoom In"><i
+                                                class="fas fa-plus"></i></button>
+                                    </div>
+                                    <button class="btn-icon btn-sm" id="fullscreenPreviewBtn"
+                                        title="Enlarge/Fullscreen"><i class="fas fa-expand-arrows-alt"></i></button>
+                                    <button class="btn-icon btn-sm" id="openNewTabBtn" title="Open in New Tab"><i
+                                            class="fas fa-external-link-alt"></i></button>
+                                </div>
+                            </div>
+                            <div class="canvas-container">
+                                <canvas id="previewCanvas"></canvas>
+                            </div>
+                            <div class="preview-footer">
+                                <small>Visual representation. Final quality depends on export settings.</small>
                             </div>
                         </div>
                     </div>

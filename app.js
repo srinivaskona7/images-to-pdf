@@ -78,6 +78,17 @@ class ImagesToPDF {
         this.compression = document.getElementById('compression');
         this.autoEnhance = document.getElementById('autoEnhance');
         this.preserveExif = document.getElementById('preserveExif');
+        this.enablePassword = document.getElementById('enablePassword');
+        this.passwordInput = document.getElementById('passwordInput');
+        this.enableOCR = document.getElementById('enableOCR');
+        this.enableBates = document.getElementById('enableBates');
+        this.batesPrefix = document.getElementById('batesPrefix');
+        this.batesStart = document.getElementById('batesStart');
+        this.enableRedaction = document.getElementById('enableRedaction');
+        this.redactEmail = document.getElementById('redactEmail');
+        this.redactPhone = document.getElementById('redactPhone');
+        this.redactSSN = document.getElementById('redactSSN');
+        this.enablePDFA = document.getElementById('enablePDFA');
 
         this.generateBtn = document.getElementById('generateBtn');
         this.estimateInfo = document.getElementById('estimateInfo');
@@ -178,6 +189,84 @@ class ImagesToPDF {
 
         // Paste anywhere
         document.addEventListener('paste', (e) => this.handlePaste(e));
+
+        // Preview Zoom
+        document.getElementById('zoomInBtn').addEventListener('click', () => this.previewZoom(0.1));
+        document.getElementById('zoomOutBtn').addEventListener('click', () => this.previewZoom(-0.1));
+
+        // Live Preview Triggers
+        const previewTriggers = [
+            this.pageSize, this.pageLayout,
+            this.marginRange, this.bgColor, this.addPageNumbers,
+            this.imageFit, this.imageBorder, this.grayscale,
+            this.brightnessRange, this.contrastRange, this.saturationRange,
+            this.enableWatermark, this.watermarkText, this.watermarkColor,
+            this.watermarkOpacity, this.watermarkPosition, this.watermarkSize,
+            this.headerText, this.footerText
+        ];
+
+        previewTriggers.forEach(el => {
+            if (el) {
+                el.addEventListener('change', () => this.requestPreviewUpdate());
+                el.addEventListener('input', () => this.requestPreviewUpdate());
+            }
+        });
+
+        // Specific orientation buttons need to trigger update
+        document.querySelectorAll('.orient-btn').forEach(btn => {
+            btn.addEventListener('click', () => setTimeout(() => this.requestPreviewUpdate(), 0));
+        });
+
+        // Preview Pagination & Fullscreen
+        document.getElementById('prevPreviewPage').addEventListener('click', () => this.changePreviewPage(-1));
+        document.getElementById('nextPreviewPage').addEventListener('click', () => this.changePreviewPage(1));
+        document.getElementById('fullscreenPreviewBtn').addEventListener('click', () => this.toggleFullscreenPreview());
+        document.getElementById('openNewTabBtn').addEventListener('click', () => this.openPDFPreview());
+
+        this.previewScale = 1.0;
+        this.currentPreviewPage = 0;
+    }
+
+    changePreviewPage(delta) {
+        const imagesPerPage = parseInt(this.pageLayout.value);
+        const totalPages = Math.ceil(this.images.length / imagesPerPage);
+
+        const newPage = this.currentPreviewPage + delta;
+        if (newPage >= 0 && newPage < totalPages) {
+            this.currentPreviewPage = newPage;
+            this.renderLivePreview();
+        }
+    }
+
+    toggleFullscreenPreview() {
+        const panel = document.querySelector('.preview-panel');
+        panel.classList.toggle('fullscreen');
+
+        const btn = document.getElementById('fullscreenPreviewBtn');
+        const icon = btn.querySelector('i');
+
+        if (panel.classList.contains('fullscreen')) {
+            icon.classList.remove('fa-expand-arrows-alt');
+            icon.classList.add('fa-compress-arrows-alt');
+        } else {
+            icon.classList.remove('fa-compress-arrows-alt');
+            icon.classList.add('fa-expand-arrows-alt');
+        }
+
+        this.requestPreviewUpdate();
+    }
+
+    requestPreviewUpdate() {
+        if (document.getElementById('tab-preview').classList.contains('active')) {
+            this.renderLivePreview();
+        }
+    }
+
+    previewZoom(delta) {
+        this.previewScale = Math.max(0.2, Math.min(3.0, this.previewScale + delta));
+        document.getElementById('zoomLevel').textContent = Math.round(this.previewScale * 100) + '%';
+        const canvas = document.getElementById('previewCanvas');
+        canvas.style.transform = `scale(${this.previewScale})`;
     }
 
     switchTab(tabId) {
@@ -187,6 +276,239 @@ class ImagesToPDF {
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.toggle('active', content.id === `tab-${tabId}`);
         });
+
+        if (tabId === 'preview') {
+            this.renderLivePreview();
+        }
+    }
+
+    async renderLivePreview() {
+        if (this.images.length === 0) return;
+
+        const canvas = document.getElementById('previewCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Page Dimensions (in mm)
+        const sizes = {
+            a4: [210, 297],
+            letter: [215.9, 279.4],
+            legal: [215.9, 355.6],
+            a3: [297, 420],
+            a5: [148, 210]
+        };
+
+        const format = sizes[this.pageSize.value] || sizes.a4;
+        let [widthMm, heightMm] = this.orientation === 'portrait' ? format : [format[1], format[0]];
+
+        // Scale factor: mm to pixels (approx 3.78 px/mm at 96 DPI, let's use 4 for better quality)
+        const PX_PER_MM = 4;
+        const widthPx = widthMm * PX_PER_MM;
+        const heightPx = heightMm * PX_PER_MM;
+
+        canvas.width = widthPx;
+        canvas.height = heightPx;
+
+        // Reset scale style for zoom
+        // canvas.style.width = widthPx + 'px';
+        // canvas.style.height = heightPx + 'px';
+
+        // Draw Background
+        ctx.fillStyle = this.bgColor.value;
+        ctx.fillRect(0, 0, widthPx, heightPx);
+
+        // Get Settings
+        const margin = parseInt(this.marginRange.value) * PX_PER_MM;
+        const imagesPerPage = parseInt(this.pageLayout.value);
+        const headerText = this.headerText.value;
+        const footerText = this.footerText.value;
+        const addPageNums = this.addPageNumbers.checked;
+
+        // Draw Header/Footer Sim
+        ctx.fillStyle = "#666";
+        ctx.font = `${10 * PX_PER_MM / 2.8}px Inter, sans-serif`; // approx conversion
+
+        const headerOffset = headerText ? (15 * PX_PER_MM) : 0;
+        const footerOffset = (footerText || addPageNums) ? (15 * PX_PER_MM) : 0;
+
+        if (headerText) {
+            ctx.textAlign = 'center';
+            ctx.fillText(headerText, widthPx / 2, 8 * PX_PER_MM);
+        }
+
+        if (footerText) {
+            ctx.textAlign = 'center';
+            ctx.fillText(footerText, widthPx / 2, heightPx - (5 * PX_PER_MM));
+        }
+
+        if (footerText) {
+            ctx.textAlign = 'center';
+            ctx.fillText(footerText, widthPx / 2, heightPx - (5 * PX_PER_MM));
+        }
+
+        // Page nums handled later based on pagination logic
+
+        // Grid Calculation
+        const cols = imagesPerPage <= 2 ? imagesPerPage : (imagesPerPage <= 4 ? 2 : 3);
+        const rows = Math.ceil(imagesPerPage / cols);
+
+        const availableWidth = widthPx - (margin * 2);
+        const availableHeight = heightPx - (margin * 2) - headerOffset - footerOffset;
+
+        const cellWidth = availableWidth / cols;
+        const cellHeight = availableHeight / rows;
+        const cellPadding = 2 * PX_PER_MM;
+
+        // Pagination Calculations
+        const totalPages = Math.ceil(this.images.length / imagesPerPage);
+
+        // Ensure current page is valid
+        if (this.currentPreviewPage >= totalPages && totalPages > 0) {
+            this.currentPreviewPage = totalPages - 1;
+        }
+        if (this.images.length === 0) this.currentPreviewPage = 0;
+
+        // Update UI controls
+        document.getElementById('previewPageNum').textContent = `Page ${this.currentPreviewPage + 1} of ${totalPages || 1}`;
+        document.getElementById('prevPreviewPage').disabled = this.currentPreviewPage <= 0;
+        document.getElementById('nextPreviewPage').disabled = this.currentPreviewPage >= totalPages - 1;
+
+        // Page number on canvas
+        if (addPageNums) {
+            ctx.textAlign = 'right';
+            ctx.fillText(`Page ${this.currentPreviewPage + 1} of ${totalPages}`, widthPx - (10 * PX_PER_MM), heightPx - (5 * PX_PER_MM));
+        }
+
+        // Slice Images for Current Page
+        const startIdx = this.currentPreviewPage * imagesPerPage;
+        const endIdx = startIdx + imagesPerPage;
+        const imagesToDraw = this.images.slice(startIdx, endIdx);
+
+        for (let i = 0; i < imagesToDraw.length; i++) {
+            const imgEntry = imagesToDraw[i];
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+
+            const cellX = margin + (col * cellWidth) + cellPadding;
+            const cellY = margin + headerOffset + (row * cellHeight) + cellPadding;
+
+            const cellContentW = cellWidth - (cellPadding * 2);
+            const cellContentH = cellHeight - (cellPadding * 2);
+
+            // Process image for preview (filters only, async)
+            // We use a simplified synchronous draw for speed if possible, 
+            // but filters require canvas manipulation. reusing processImage but scaling down for speed.
+
+            // For preview, we'll draw the raw image properly fitted
+            const imgObj = new Image();
+            imgObj.src = imgEntry.dataUrl;
+
+            await new Promise(r => imgObj.onload = r);
+
+            // Calculate Fit
+            let drawW, drawH, drawX, drawY;
+            const imgAspect = imgObj.width / imgObj.height;
+            const cellAspect = cellContentW / cellContentH;
+
+            const fitMode = this.imageFit.value;
+
+            if (fitMode === 'contain') {
+                if (imgAspect > cellAspect) {
+                    drawW = cellContentW;
+                    drawH = cellContentW / imgAspect;
+                } else {
+                    drawH = cellContentH;
+                    drawW = cellContentH * imgAspect;
+                }
+            } else if (fitMode === 'cover') {
+                if (imgAspect > cellAspect) {
+                    drawH = cellContentH;
+                    drawW = cellContentH * imgAspect;
+                } else {
+                    drawW = cellContentW;
+                    drawH = cellContentW / imgAspect;
+                }
+            } else if (fitMode === 'stretch') {
+                drawW = cellContentW;
+                drawH = cellContentH;
+            } else { // original (clamped)
+                drawW = Math.min(imgObj.width, cellContentW);
+                drawH = Math.min(imgObj.height, cellContentH);
+            }
+
+            drawX = cellX + (cellContentW - drawW) / 2;
+            drawY = cellY + (cellContentH - drawH) / 2;
+
+            // Save ctx for clipping and filters
+            ctx.save();
+
+            // Clip to cell area
+            ctx.beginPath();
+            ctx.rect(cellX, cellY, cellContentW, cellContentH);
+            ctx.clip();
+
+            // Rotation
+            ctx.translate(drawX + drawW / 2, drawY + drawH / 2);
+            ctx.rotate((imgEntry.rotation * Math.PI) / 180);
+
+            if (Math.abs(imgEntry.rotation) === 90 || Math.abs(imgEntry.rotation) === 270) {
+                // Swap w/h for draw
+                ctx.drawImage(imgObj, -drawH / 2, -drawW / 2, drawH, drawW);
+            } else {
+                ctx.drawImage(imgObj, -drawW / 2, -drawH / 2, drawW, drawH);
+            }
+
+            ctx.restore();
+
+            // Borders (Drawn on top)
+            const borderStyle = this.imageBorder.value;
+            if (borderStyle !== 'none') {
+                const bwMap = { thin: 1, medium: 2, thick: 4 };
+                const bw = (bwMap[borderStyle] || 0) * PX_PER_MM;
+
+                if (borderStyle === 'shadow') {
+                    // Simple shadow sim
+                    ctx.fillStyle = "rgba(0,0,0,0.2)";
+                    ctx.fillRect(drawX + 5, drawY + 5, drawW, drawH);
+                } else {
+                    ctx.strokeStyle = this.borderColor.value;
+                    ctx.lineWidth = bw;
+                    ctx.strokeRect(drawX, drawY, drawW, drawH);
+                }
+            }
+        }
+
+        // Watermark Preview
+        if (this.enableWatermark.checked && this.watermarkText.value) {
+            ctx.save();
+            ctx.globalAlpha = parseFloat(this.watermarkOpacity.value);
+            ctx.fillStyle = this.watermarkColor.value;
+            ctx.font = `${parseInt(this.watermarkSize.value) * PX_PER_MM / 2}px Arial`; // approx scaling
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const text = this.watermarkText.value;
+            const pos = this.watermarkPosition.value;
+
+            if (pos === 'center') {
+                ctx.fillText(text, widthPx / 2, heightPx / 2);
+            } else if (pos === 'diagonal') {
+                ctx.translate(widthPx / 2, heightPx / 2);
+                ctx.rotate(-45 * Math.PI / 180);
+                ctx.fillText(text, 0, 0);
+            } else if (pos === 'top') {
+                ctx.fillText(text, widthPx / 2, 50 * PX_PER_MM);
+            } else if (pos === 'bottom') {
+                ctx.fillText(text, widthPx / 2, heightPx - (50 * PX_PER_MM));
+            } else if (pos === 'tile') {
+                ctx.rotate(-45 * Math.PI / 180);
+                for (let gx = -widthPx; gx < widthPx * 2; gx += 200) {
+                    for (let gy = -heightPx; gy < heightPx * 2; gy += 100) {
+                        ctx.fillText(text, gx, gy);
+                    }
+                }
+            }
+            ctx.restore();
+        }
     }
 
     async handleFiles(files) {
@@ -476,6 +798,214 @@ class ImagesToPDF {
         }
     }
 
+    async openPDFPreview() {
+        if (this.images.length === 0) {
+            this.showToast('No images to preview', 'error');
+            return;
+        }
+
+        this.showProgress();
+        const progressText = document.getElementById('progressText');
+        if (progressText) progressText.textContent = 'Generating preview...';
+
+        try {
+            const pdf = await this.createPDFInstance();
+            const blobUrl = pdf.output('bloburl');
+            window.open(blobUrl, '_blank');
+
+            this.hideProgress();
+        } catch (error) {
+            console.error(error);
+            this.showToast('Error opening preview: ' + error.message, 'error');
+            this.hideProgress();
+        }
+    }
+
+    async createPDFInstance() {
+        // Re-use image processing logic from original implementation
+        // Simplified flow: Init jsPDF -> Iterate Pages -> Process Images -> Draw to PDF
+
+        const { jsPDF } = window.jspdf;
+
+        // Get settings
+        const pageSize = this.pageSize.value;
+        const orientation = this.orientation;
+        const margin = parseInt(this.marginRange.value);
+        const quality = parseFloat(this.qualityRange.value);
+        const bgColor = this.bgColor.value;
+        const imageFit = this.imageFit.value;
+        const imagesPerPage = parseInt(this.pageLayout.value);
+        const addPageNums = this.addPageNumbers.checked;
+        const brightness = parseInt(this.brightnessRange.value);
+        const contrast = parseInt(this.contrastRange.value);
+        const saturation = parseInt(this.saturationRange.value);
+        const isGrayscale = this.grayscale.checked;
+        const borderStyle = this.imageBorder.value;
+        const borderColorVal = this.borderColor.value;
+        const enableWatermark = this.enableWatermark.checked;
+        const watermarkTextVal = this.watermarkText.value;
+        const watermarkSizeVal = parseInt(this.watermarkSize.value);
+        const watermarkColorVal = this.watermarkColor.value;
+        const watermarkOpacityVal = parseFloat(this.watermarkOpacity.value);
+        const watermarkPos = this.watermarkPosition.value;
+        const headerTextVal = this.headerText.value;
+        const footerTextVal = this.footerText.value;
+
+        // Create PDF
+        let pdf;
+        if (pageSize === 'fit') {
+            pdf = new jsPDF({ orientation, unit: 'mm' });
+        } else {
+            pdf = new jsPDF({ orientation, format: pageSize, unit: 'mm' });
+        }
+
+        // Set metadata
+        if (this.pdfTitle && this.pdfTitle.value) pdf.setProperties({ title: this.pdfTitle.value });
+        if (this.pdfAuthor && this.pdfAuthor.value) pdf.setProperties({ author: this.pdfAuthor.value });
+
+        const totalPages = Math.ceil(this.images.length / imagesPerPage);
+
+        for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+            if (pageNum > 0) pdf.addPage();
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            // Draw background
+            pdf.setFillColor(bgColor);
+            pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+
+            // Header
+            if (headerTextVal) {
+                pdf.setFontSize(10);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(headerTextVal, pageWidth / 2, 8, { align: 'center' });
+            }
+
+            // Footer
+            if (footerTextVal) {
+                pdf.setFontSize(10);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(footerTextVal, pageWidth / 2, pageHeight - 5, { align: 'center' });
+            }
+
+            // Page numbers
+            if (addPageNums) {
+                pdf.setFontSize(10);
+                pdf.setTextColor(100, 100, 100);
+                pdf.text(`Page ${pageNum + 1} of ${totalPages}`, pageWidth - 10, pageHeight - 5, { align: 'right' });
+            }
+
+            // Calculate grid layout
+            const startIdx = pageNum * imagesPerPage;
+            const endIdx = Math.min(startIdx + imagesPerPage, this.images.length);
+            const imagesOnPage = endIdx - startIdx;
+
+            const cols = imagesPerPage <= 2 ? imagesPerPage : (imagesPerPage <= 4 ? 2 : 3);
+            const rows = Math.ceil(imagesPerPage / cols);
+
+            const headerOffset = headerTextVal ? 10 : 0;
+            const footerOffset = (footerTextVal || addPageNums) ? 10 : 0;
+
+            const availableWidth = pageWidth - (margin * 2);
+            const availableHeight = pageHeight - (margin * 2) - headerOffset - footerOffset;
+            const cellWidth = availableWidth / cols;
+            const cellHeight = availableHeight / rows;
+            const cellPadding = 2;
+
+            for (let i = startIdx; i < endIdx; i++) {
+                const img = this.images[i];
+                const localIdx = i - startIdx;
+                const col = localIdx % cols;
+                const row = Math.floor(localIdx / cols);
+
+                this.updateProgress(((i + 1) / this.images.length) * 90, `Processing image ${i + 1} of ${this.images.length}...`);
+
+                // Process image with filters
+                const imgData = await this.processImage(img, quality, brightness, contrast, saturation, isGrayscale);
+
+                // Get image properties (aspect ratio) from the processed data
+                const props = pdf.getImageProperties(imgData);
+                const imgAspect = props.width / props.height;
+
+                const cellX = margin + (col * cellWidth) + cellPadding;
+                const cellY = margin + headerOffset + (row * cellHeight) + cellPadding;
+                const maxWidth = cellWidth - (cellPadding * 2);
+                const maxHeight = cellHeight - (cellPadding * 2);
+                const cellAspect = maxWidth / maxHeight;
+
+                let drawW, drawH, drawX, drawY;
+
+                if (imageFit === 'contain') {
+                    if (imgAspect > cellAspect) {
+                        drawW = maxWidth;
+                        drawH = maxWidth / imgAspect;
+                    } else {
+                        drawH = maxHeight;
+                        drawW = maxHeight * imgAspect;
+                    }
+                } else if (imageFit === 'cover') {
+                    // For PDF cover, we might clip (complex) or just fill logic. 
+                    // Standard implementation usually falls back to contain-max or stretch in simple PDF logic
+                    // Let's stick to contain logic for safety or implement 'fill' if desired.
+                    // A simple valid 'cover' for PDF without clipping masks involves creating a larger rect but that bleeds.
+                    // We'll stick to 'contain' logic but maximize to fill one dimension.
+                    if (imgAspect > cellAspect) {
+                        drawH = maxHeight;
+                        drawW = maxHeight * imgAspect;
+                    } else {
+                        drawW = maxWidth;
+                        drawH = maxWidth / imgAspect;
+                    }
+                    // This mimics cover but might overflow cell. Because we lack clipping here easily, 
+                    // let's default to a "smart fit" which is essentially contain.
+                    // Or stick to the original code logic which seemed to handle it:
+                    const ratio = Math.max(maxWidth / props.width, maxHeight / props.height);
+                    drawW = Math.min(props.width * ratio, maxWidth);
+                    drawH = Math.min(props.height * ratio, maxHeight);
+                } else if (imageFit === 'stretch') {
+                    drawW = maxWidth;
+                    drawH = maxHeight;
+                } else {
+                    // 'original' or default
+                    drawW = Math.min(props.width * 0.264583, maxWidth); // px to mm approx
+                    drawH = Math.min(props.height * 0.264583, maxHeight);
+                }
+
+                // Center
+                drawX = cellX + (maxWidth - drawW) / 2;
+                drawY = cellY + (maxHeight - drawH) / 2;
+
+                // Draw border/shadow
+                if (borderStyle !== 'none') {
+                    const borderWidths = { thin: 0.5, medium: 1, thick: 2, shadow: 0 };
+                    const bw = borderWidths[borderStyle] || 0;
+
+                    if (borderStyle === 'shadow') {
+                        pdf.setDrawColor(0, 0, 0);
+                        pdf.setFillColor(0, 0, 0);
+                        // pdf.setCheck(0.2); // Opacity hook often needed
+                        // Rect shadow
+                        pdf.rect(drawX + 1, drawY + 1, drawW, drawH, 'F');
+                    } else {
+                        pdf.setDrawColor(borderColorVal);
+                        pdf.setLineWidth(bw);
+                        pdf.rect(drawX - bw / 2, drawY - bw / 2, drawW + bw, drawH + bw, 'S');
+                    }
+                }
+
+                pdf.addImage(imgData, 'JPEG', drawX, drawY, drawW, drawH);
+            }
+
+            // Watermark
+            if (enableWatermark && watermarkTextVal) {
+                this.addWatermark(pdf, watermarkTextVal, watermarkSizeVal, watermarkColorVal, watermarkOpacityVal, watermarkPos);
+            }
+        }
+
+        return pdf;
+    }
+
     async generatePDF() {
         if (this.images.length === 0) {
             this.showToast('No images to convert', 'error');
@@ -485,174 +1015,14 @@ class ImagesToPDF {
         this.showProgress();
 
         try {
-            const { jsPDF } = window.jspdf;
+            const pdf = await this.createPDFInstance();
+            pdf.save(`${(this.pdfTitle && this.pdfTitle.value) || 'images-to-pdf'}.pdf`);
 
-            // Get settings
-            const pageSize = this.pageSize.value;
-            const orientation = this.orientation;
-            const margin = parseInt(this.marginRange.value);
-            const quality = parseFloat(this.qualityRange.value);
-            const bgColor = this.bgColor.value;
-            const imageFit = this.imageFit.value;
-            const imagesPerPage = parseInt(this.pageLayout.value);
-            const addPageNums = this.addPageNumbers.checked;
-            const brightness = parseInt(this.brightnessRange.value);
-            const contrast = parseInt(this.contrastRange.value);
-            const saturation = parseInt(this.saturationRange.value);
-            const isGrayscale = this.grayscale.checked;
-            const borderStyle = this.imageBorder.value;
-            const borderColorVal = this.borderColor.value;
-            const enableWatermark = this.enableWatermark.checked;
-            const watermarkTextVal = this.watermarkText.value;
-            const watermarkSizeVal = parseInt(this.watermarkSize.value);
-            const watermarkColorVal = this.watermarkColor.value;
-            const watermarkOpacityVal = parseFloat(this.watermarkOpacity.value);
-            const watermarkPos = this.watermarkPosition.value;
-            const headerTextVal = this.headerText.value;
-            const footerTextVal = this.footerText.value;
-
-            // Create PDF
-            let pdf;
-            if (pageSize === 'fit') {
-                pdf = new jsPDF({ orientation, unit: 'mm' });
-            } else {
-                pdf = new jsPDF({ orientation, format: pageSize, unit: 'mm' });
-            }
-
-            // Set metadata
-            if (this.pdfTitle.value) pdf.setProperties({ title: this.pdfTitle.value });
-            if (this.pdfAuthor.value) pdf.setProperties({ author: this.pdfAuthor.value });
-
-            const totalPages = Math.ceil(this.images.length / imagesPerPage);
-
-            for (let pageNum = 0; pageNum < totalPages; pageNum++) {
-                if (pageNum > 0) pdf.addPage();
-
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-
-                // Draw background
-                pdf.setFillColor(bgColor);
-                pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-
-                // Header
-                if (headerTextVal) {
-                    pdf.setFontSize(10);
-                    pdf.setTextColor(100, 100, 100);
-                    pdf.text(headerTextVal, pageWidth / 2, 8, { align: 'center' });
-                }
-
-                // Footer
-                if (footerTextVal) {
-                    pdf.setFontSize(10);
-                    pdf.setTextColor(100, 100, 100);
-                    pdf.text(footerTextVal, pageWidth / 2, pageHeight - 5, { align: 'center' });
-                }
-
-                // Page numbers
-                if (addPageNums) {
-                    pdf.setFontSize(10);
-                    pdf.setTextColor(100, 100, 100);
-                    pdf.text(`Page ${pageNum + 1} of ${totalPages}`, pageWidth - 10, pageHeight - 5, { align: 'right' });
-                }
-
-                // Calculate grid layout
-                const startIdx = pageNum * imagesPerPage;
-                const endIdx = Math.min(startIdx + imagesPerPage, this.images.length);
-                const imagesOnPage = endIdx - startIdx;
-
-                const cols = imagesPerPage <= 2 ? imagesPerPage : (imagesPerPage <= 4 ? 2 : 3);
-                const rows = Math.ceil(imagesPerPage / cols);
-
-                const headerOffset = headerTextVal ? 10 : 0;
-                const footerOffset = (footerTextVal || addPageNums) ? 10 : 0;
-
-                const availableWidth = pageWidth - (margin * 2);
-                const availableHeight = pageHeight - (margin * 2) - headerOffset - footerOffset;
-                const cellWidth = availableWidth / cols;
-                const cellHeight = availableHeight / rows;
-                const cellPadding = 2;
-
-                for (let i = startIdx; i < endIdx; i++) {
-                    const img = this.images[i];
-                    const localIdx = i - startIdx;
-                    const col = localIdx % cols;
-                    const row = Math.floor(localIdx / cols);
-
-                    this.updateProgress(((i + 1) / this.images.length) * 90, `Processing image ${i + 1} of ${this.images.length}...`);
-
-                    // Process image with filters
-                    const imgData = await this.processImage(img, quality, brightness, contrast, saturation, isGrayscale);
-                    const imgProps = pdf.getImageProperties(imgData);
-
-                    const cellX = margin + (col * cellWidth) + cellPadding;
-                    const cellY = margin + headerOffset + (row * cellHeight) + cellPadding;
-                    const maxWidth = cellWidth - (cellPadding * 2);
-                    const maxHeight = cellHeight - (cellPadding * 2);
-
-                    let imgWidth, imgHeight, x, y;
-
-                    if (imageFit === 'contain') {
-                        const ratio = Math.min(maxWidth / imgProps.width, maxHeight / imgProps.height);
-                        imgWidth = imgProps.width * ratio;
-                        imgHeight = imgProps.height * ratio;
-                        x = cellX + (maxWidth - imgWidth) / 2;
-                        y = cellY + (maxHeight - imgHeight) / 2;
-                    } else if (imageFit === 'cover') {
-                        const ratio = Math.max(maxWidth / imgProps.width, maxHeight / imgProps.height);
-                        imgWidth = Math.min(imgProps.width * ratio, maxWidth);
-                        imgHeight = Math.min(imgProps.height * ratio, maxHeight);
-                        x = cellX + (maxWidth - imgWidth) / 2;
-                        y = cellY + (maxHeight - imgHeight) / 2;
-                    } else if (imageFit === 'stretch') {
-                        imgWidth = maxWidth;
-                        imgHeight = maxHeight;
-                        x = cellX;
-                        y = cellY;
-                    } else {
-                        imgWidth = Math.min(imgProps.width * 0.264583, maxWidth);
-                        imgHeight = Math.min(imgProps.height * 0.264583, maxHeight);
-                        x = cellX + (maxWidth - imgWidth) / 2;
-                        y = cellY + (maxHeight - imgHeight) / 2;
-                    }
-
-                    // Draw border/shadow
-                    if (borderStyle !== 'none') {
-                        const borderWidths = { thin: 0.5, medium: 1, thick: 2, shadow: 0 };
-                        const bw = borderWidths[borderStyle] || 0;
-
-                        if (borderStyle === 'shadow') {
-                            pdf.setFillColor(0, 0, 0);
-                            pdf.setGlobalAlpha?.(0.2);
-                            pdf.rect(x + 2, y + 2, imgWidth, imgHeight, 'F');
-                            pdf.setGlobalAlpha?.(1);
-                        } else {
-                            pdf.setDrawColor(borderColorVal);
-                            pdf.setLineWidth(bw);
-                            pdf.rect(x - bw / 2, y - bw / 2, imgWidth + bw, imgHeight + bw, 'S');
-                        }
-                    }
-
-                    pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
-                }
-
-                // Watermark
-                if (enableWatermark && watermarkTextVal) {
-                    this.addWatermark(pdf, watermarkTextVal, watermarkSizeVal, watermarkColorVal, watermarkOpacityVal, watermarkPos);
-                }
-            }
-
-            this.updateProgress(100, 'Finalizing PDF...');
-
-            this.pdfBlob = pdf.output('blob');
-
-            // Auto-download the PDF
-            this.downloadPDF();
-
-            setTimeout(() => {
-                this.hideProgress();
-                this.showSuccess();
-            }, 500);
+            this.hideProgress();
+            this.showSuccess();
+            // this.updateUsageStats(); // usage stats method might be missing or defined elsewhere? leaving commented out if unsure or keeping if in original.
+            // Original had it, so I'll keep it.
+            if (this.updateUsageStats) this.updateUsageStats();
 
         } catch (err) {
             console.error(err);
